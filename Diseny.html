@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>上海迪士尼 · 一日游可交互攻略卡片</title>
+<link rel="preconnect" href="https://unpkg.com"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-9Ps0e2M1G7b8Q2kO9x1n+G6s+5jWvVwI3pSBu/7pJr3gKX2l0Wk7uX3nV6i9lCDj" crossorigin="anonymous">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-q8T5kE1J3z2rVv9g6W3Qk7m8M2cYkqj2V8l1m0H6x1F8Hj3bqK3wY7k2Z1pU8b8Q" crossorigin="anonymous"></script>
+<style>
+  :root{
+    --bg:#0b1220;            /* 深色背景 */
+    --card:#111827;          /* 卡片底色 */
+    --muted:#9ca3af;         /* 次级文字 */
+    --accent:#60a5fa;        /* 主题蓝 */
+    --accent-2:#34d399;      /* 成功绿 */
+    --accent-3:#f59e0b;      /* 提示橙 */
+    --danger:#f87171;        /* 红 */
+    --ring: 0 0 0 2px rgba(96,165,250,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;}
+  body{margin:0;background:linear-gradient(180deg,#0b1220,#0e172a 65%);color:#e5e7eb;font:14px/1.55 system-ui, -apple-system, Segoe UI, Roboto, PingFang SC, Noto Sans CJK SC, "Microsoft YaHei", sans-serif}
+  a{color:var(--accent)}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px 16px 120px}
+  header{
+    position:sticky;top:0;z-index:50;background:rgba(11,18,32,.8);backdrop-filter:blur(8px);border-bottom:1px solid #111827;
+  }
+  .head-bar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px}
+  .head-title{display:flex;gap:12px;align-items:center}
+  .logo{width:36px;height:36px;border-radius:10px;background:conic-gradient(from 220deg,#60a5fa,#34d399);box-shadow:0 0 40px rgba(96,165,250,.3)}
+  h1{margin:0;font-size:18px;font-weight:700}
+  .head-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{appearance:none;border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;border-radius:10px;padding:10px 14px;cursor:pointer}
+  .btn:hover{box-shadow:var(--ring)}
+  .btn.primary{background:linear-gradient(180deg,#1f4fff,#1b72ff);border-color:#1e40af}
+  .btn.ghost{background:transparent}
+  .layout{display:grid;grid-template-columns:380px 1fr;gap:16px;margin-top:16px}
+  @media(max-width:1024px){.layout{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  .card h2{margin:0 0 8px;padding:0 0 4px;border-bottom:1px dashed #1f2937;color:#fff;font-size:16px}
+  .card .inner{padding:16px}
+  .muted{color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid #1f2937;border-radius:999px;padding:6px 10px}
+  .chip.badge{background:#0b1220;font-weight:700;color:#cbd5e1}
+  .chip.ok{background:rgba(52,211,153,.12);border-color:#14532d;color:#86efac}
+  .chip.warn{background:rgba(245,158,11,.1);border-color:#7c2d12;color:#fbbf24}
+  .chip.danger{background:rgba(248,113,113,.1);border-color:#7f1d1d;color:#fecaca}
+  .list{display:flex;flex-direction:column;gap:10px}
+  .item{display:flex;gap:10px;align-items:flex-start;border:1px solid #1f2937;border-radius:12px;padding:10px}
+  .item input[type="checkbox"]{width:18px;height:18px;margin-top:3px}
+  .item .grow{flex:1}
+  .item .note{color:#9ca3af;font-size:12px}
+  .search{display:flex;gap:8px;margin-bottom:8px}
+  .search input{flex:1;border-radius:10px;border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;padding:10px}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .tab{padding:8px 10px;border-radius:10px;border:1px solid #1f2937;background:#0b1220;cursor:pointer}
+  .tab.active{background:rgba(96,165,250,.15);border-color:#2563eb;color:#bfdbfe}
+  .timeline{display:flex;flex-direction:column;gap:12px}
+  .step{border:1px solid #1f2937;border-radius:14px;overflow:hidden}
+  .step-head{display:flex;align-items:center;gap:10px;background:#0b1220;padding:10px;border-bottom:1px solid #1f2937}
+  .step-num{width:26px;height:26px;border-radius:7px;background:linear-gradient(180deg,#60a5fa,#34d399);color:#0b1220;font-weight:800;display:grid;place-items:center}
+  .step-title{font-weight:700}
+  .step-tags{margin-left:auto;display:flex;gap:6px}
+  .step-body{padding:10px;display:none}
+  .step.open .step-body{display:block}
+  .step .detail{color:#cbd5e1}
+  .stamp{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(52,211,153,.1);border:1px solid #14532d;color:#86efac}
+  .optional{opacity:.9}
+  .counter{font-variant-numeric:tabular-nums}
+  .map{height:420px;border-radius:14px;overflow:hidden;border:1px solid #1f2937}
+  .map-fallback{display:none}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  footer{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:60}
+  footer .btn{box-shadow:0 8px 20px rgba(0,0,0,.35)}
+</style>
+</head>
+<body>
+  <header>
+    <div class="head-bar wrap" style="padding:12px 0">
+      <div class="head-title">
+        <div class="logo" aria-hidden></div>
+        <div>
+          <h1>上海迪士尼 · 一日游可交互攻略卡片</h1>
+          <div class="muted" id="todayInfo">今天 · —</div>
+        </div>
+      </div>
+      <div class="head-actions">
+        <button class="btn" id="btnExport">导出今日进度</button>
+        <button class="btn ghost" id="btnReset">清空勾选</button>
+        <button class="btn primary" onclick="window.print()">🖨️ 打印</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap layout">
+    <!-- 左列：信息卡片 -->
+    <section class="stack" style="display:flex;flex-direction:column;gap:16px">
+
+      <!-- 安检与入园 -->
+      <article class="card">
+        <div class="inner">
+          <h2>① 安检 & 入园</h2>
+          <div class="chips" style="margin-bottom:10px">
+            <span class="chip badge">建议 6:10 第一道门（靠左）</span>
+            <span class="chip badge">7:10 第二道门入园冲刺</span>
+          </div>
+          <div class="list">
+            <label class="item"><input type="checkbox" data-key="gate-middle"/> <div class="grow"><b>安检通道</b>：优先走<b>中间两条</b>（尤其<b>倒数第二个</b>）。<div class="note">错峰排队，检查包速过。</div></div></label>
+            <label class="item"><input type="checkbox" data-key="gate-9-10-11"/> <div class="grow"><b>检票口</b>：优先 <b>9 / 10 / 11</b> 号闸机。</div></label>
+            <label class="item"><input type="checkbox" data-key="610-line1"/> <div class="grow"><b>6:10</b> 到达<b>第一道门（左边）</b>排队。</div></label>
+            <label class="item"><input type="checkbox" data-key="710-sprint"/> <div class="grow"><b>7:10</b> 第二道门开 <b>入园冲刺</b>。</div></label>
+          </div>
+        </div>
+      </article>
+
+      <!-- 交通 -->
+      <article class="card">
+        <div class="inner">
+          <h2>② 交通</h2>
+          <div class="list">
+            <label class="item"><input type="checkbox" data-key="gate-1-walk"/> <div class="grow">从<b>1号口</b>步行约<b>5 分钟</b>到园区。</div></label>
+            <label class="item"><input type="checkbox" data-key="gate-3-taxi"/> <div class="grow">打车至<b>3号口</b> / 出租车下客区更近。</div></label>
+            <div class="item">
+              <div class="grow">
+                <div class="chips">
+                  <span class="chip warn">地铁：<b>11号线 · 迪士尼站</b></span>
+                  <a class="chip" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=31.143429&mlon=121.663737#map=17/31.14343/121.66374">打开在线地图</a>
+                </div>
+                <div class="note">出站步行可达星愿湖与入园口。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 必带清单 -->
+      <article class="card">
+        <div class="inner">
+          <h2>③ 必带清单</h2>
+          <div class="grid" id="packing"></div>
+        </div>
+      </article>
+
+      <!-- 预约 & 见面会 -->
+      <article class="card">
+        <div class="inner">
+          <h2>④ 预约 & 见面会</h2>
+          <div class="list">
+            <label class="item"><input type="checkbox" data-key="book-storybook"/> <div class="grow"><b>米奇妙游童话书</b>（APP预约等候卡）：入园右侧排队，<b>一楼阶梯中后排</b>更稳。</div></label>
+            <label class="item"><input type="checkbox" data-key="zootopia-meet"/> <div class="grow"><b>动物城警局招募中心</b>：<b>朱迪/尼克</b>见面会（旁边可盖章）。</div></label>
+            <label class="item"><input type="checkbox" data-key="garden-meet"/> <div class="grow"><b>奇想花园</b>见面会：留意当天时刻表。</div></label>
+            <div class="item"><div class="grow">
+              <b>时间卡</b>：<span class="chip">16:25</span> <span class="chip">17:30</span>（<b>米奇妙游童话书</b>）
+              <div class="note">建议提前 15 分钟到达排队点。</div>
+            </div></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 盖章清单 -->
+      <article class="card">
+        <div class="inner">
+          <h2>⑤ 盖章清单 <span class="muted">(<span id="stampDone" class="counter">0</span>/<span id="stampTotal" class="counter">0</span>)</span></h2>
+          <div class="search"><input id="stampSearch" placeholder="搜索盖章点…（如：老车站 / 米奇）"/></div>
+          <div id="stamps" class="list"></div>
+        </div>
+      </article>
+    </section>
+
+    <!-- 右列：地图 + 行程 -->
+    <section style="display:flex;flex-direction:column;gap:16px">
+      <article class="card">
+        <div class="inner">
+          <h2>在线地图（可缩放/点击）</h2>
+          <div id="map" class="map" role="region" aria-label="上海迪士尼在线地图"></div>
+          <div id="mapFallback" class="map-fallback" aria-hidden>
+            <img src="disney_map.png" alt="上海迪士尼平面图（离线占位）" style="width:100%;display:block"/>
+          </div>
+          <div class="chips" style="margin-top:8px">
+            <a class="chip" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=31.1440&mlon=121.6570#map=16/31.1440/121.6570">在 OpenStreetMap 打开</a>
+            <a class="chip" target="_blank" rel="noopener" href="https://maps.apple.com/?q=Shanghai+Disneyland&sll=31.1440,121.6570">在 Apple 地图查看</a>
+            <a class="chip" target="_blank" rel="noopener" href="https://maps.google.com/?q=31.1440,121.6570">在 Google 地图查看</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 行程时间轴 -->
+      <article class="card">
+        <div class="inner">
+          <h2>⑥ 一日游时间轴（从早到晚 · 可折叠）</h2>
+          <div class="tabs" id="filters">
+            <button class="tab active" data-filter="all">全部</button>
+            <button class="tab" data-filter="must">只看必玩</button>
+            <button class="tab" data-filter="opt">只看可选</button>
+          </div>
+          <div class="search"><input id="search" placeholder="按项目 / 关键词过滤，如：矿山车 / 左侧排队 / 第一排"/></div>
+          <div id="timeline" class="timeline"></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <button class="btn" id="btnExpand">展开全部</button>
+    <button class="btn" id="btnCollapse">折叠全部</button>
+  </footer>
+
+<script>
+// ====== 工具函数：本地存储开关 ======
+const KEY_PREFIX = 'sd_interactive_v1.';
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function save(key, val){localStorage.setItem(KEY_PREFIX+key, JSON.stringify(val))}
+function load(key, def){try{return JSON.parse(localStorage.getItem(KEY_PREFIX+key)) ?? def}catch{return def}}
+function persistChecks(root){
+  root.querySelectorAll('input[type="checkbox"]').forEach(el=>{
+    const k = el.dataset.key; if(!k) return;
+    el.checked = load(k,false);
+    el.addEventListener('change', ()=> save(k, el.checked));
+  });
+}
+
+// ====== 头部：今天信息 ======
+(function(){
+  const now = new Date();
+  const fmt = n=> n.toString().padStart(2,'0');
+  $('#todayInfo').textContent = `${now.getFullYear()}-${fmt(now.getMonth()+1)}-${fmt(now.getDate())} · ${['日','一','二','三','四','五','六'][now.getDay()]}`;
+})();
+
+// ====== 必带清单 ======
+const PACK_ITEMS = [
+  '身份证','纸巾','湿纸巾','雨衣','充电宝','轻便零食','垃圾袋','水杯','降温毛巾'
+];
+(function(){
+  const box = $('#packing');
+  PACK_ITEMS.forEach((name,i)=>{
+    const key = 'pack.'+i;
+    const el = document.createElement('label');
+    el.className = 'item';
+    el.innerHTML = `<input type="checkbox" data-key="${key}"/> <div class="grow"><b>${name}</b></div>`;
+    box.appendChild(el);
+  });
+  persistChecks(box);
+})();
+
+// ====== 盖章清单 ======
+const STAMPS = [
+  '动物城警局招募中心（朱迪/尼克见面会旁）',
+  '船奇戏水滩左侧树木旁',
+  '古迹探索营入口',
+  '奇奇蒂蒂淘淘铺（店内）',
+  '创极速光轮（外侧）',
+  '巴斯光年星际营救（旁边）',
+  '太空对话史迪奇（附近）',
+  '艾尔玩具店（门口）',
+  '米奇米妮同心铺（店内）',
+  '童话城堡（外侧）',
+  '森林百物商店（收银台附近）',
+  '爱丽丝迷宫出口',
+  '十二朋友园靠狗狗壁画 · 花间美味旁',
+  '老车站商店（出口处）',
+  'M 大街购物廊（进门右手边）',
+  '童车轮椅租赁处'
+];
+(function(){
+  const list = $('#stamps');
+  STAMPS.forEach((name,i)=>{
+    const key = 'stamp.'+i;
+    const row = document.createElement('label');
+    row.className = 'item';
+    row.innerHTML = `<input type="checkbox" data-key="${key}"/> <div class="grow">${name}</div>`;
+    list.appendChild(row);
+  });
+  const refresh = ()=>{
+    const total = STAMPS.length;
+    const done = STAMPS.filter((_,i)=> load('stamp.'+i,false)).length;
+    $('#stampTotal').textContent = total; $('#stampDone').textContent = done;
+  };
+  list.addEventListener('change', refresh);
+  persistChecks(list); refresh();
+  // 搜索过滤
+  $('#stampSearch').addEventListener('input', e=>{
+    const kw = e.target.value.trim();
+    $$('#stamps .item').forEach((el,idx)=>{
+      const show = !kw || STAMPS[idx].toLowerCase().includes(kw.toLowerCase());
+      el.style.display = show ? '' : 'none';
+    })
+  });
+})();
+
+// ====== 时间轴（必玩/可选 + 可折叠） ======
+const STEPS = [
+  {n:1,  t:'安检与检票口',       must:true,  tip:'通道选中间两条（尤其倒数第二个）；首选 9/10/11 号闸机。', more:''},
+  {n:2,  t:'交通与入口选择',     must:true,  tip:'1号口步行 5 分钟；或打车至 3 号口/出租车下客区。', more:''},
+  {n:3,  t:'预约：米奇妙游童话书', must:true,  tip:'APP 预约等候卡；右侧排队；一楼阶梯中后排。', more:'留意场次 16:25 / 17:30。'},
+  {n:4,  t:'七个小矮人矿山车',   must:true,  tip:'优选最后一排，摆动感更强。', more:'梦幻世界 · 家庭过山车。'},
+  {n:5,  t:'疯狂动物城：热力追踪', must:true,  tip:'矿车东侧入口；排右边队伍；尽量坐第二辆车/前排。', more:'打卡后旁边盖章（动物城警局招募中心）。'},
+  {n:6,  t:'飞跃地平线',         must:true,  tip:'左侧队伍；2 号门入 1 号通道。', more:'建议先放包，专心观景。'},
+  {n:7,  t:'加勒比海盗：沉落宝藏之战', must:true,  tip:'最左通道；早晚人少；优先第一排。', more:'出场后依次可盖章：船奇戏水滩左侧树木 → （雷鸣山漂流可选）→ 古迹探索营入口 → 奇奇蒂蒂淘淘铺。'},
+  {n:8,  t:'创极速光轮',         must:true,  tip:'外场盖章；若排长队可改傍晚。', more:'速度刺激，可优先安排。'},
+  {n:9,  t:'巴斯光年星际营救（可选）', must:false, tip:'旁边可盖章；接可选：太空对话史迪奇 → 喷气背包飞行器。', more:'得分向玩法，家庭友好。'},
+  {n:10, t:'花车巡游',           must:true,  tip:'提前 20 分钟占位。', more:''},
+  {n:11, t:'抱抱龙冲天赛车',     must:true,  tip:'后排失重感更强。', more:'盖章：艾尔玩具店（门口）；可选：弹簧狗团团转；胡迪牛仔嘉年华找“开口笑的驴”。'},
+  {n:12, t:'梦幻世界补票（可选）', must:false, tip:'小飞侠天空奇遇 → 晶彩奇航。', more:'店内盖章：米奇米妮同心铺；城堡外侧盖章；冰雪奇缘排左边坐左过道。'},
+  {n:13, t:'百亩森林段',         must:true,  tip:'旋转疯蜜罐 → 小熊维尼历险记。', more:'盖章：森林百物商店收银附近；途中可在魔法师秘制小食补给。'},
+  {n:14, t:'动物城拍照 & 爪子冰棍', must:true, tip:'利用下午低峰补照片。', more:''},
+  {n:15, t:'爱丽丝迷宫 + 漫游童话时光', must:true, tip:'迷宫出口盖章 → 进城堡漫游。', more:''},
+  {n:16, t:'米奇妙游童话书（演出）', must:true, tip:'16:25 / 17:30 场；搭配奇想花园见面会；盖章：漫威英雄总部钢铁侠旁。', more:''},
+  {n:17, t:'城堡附近转一圈（可选）', must:false, tip:'小飞象 + 旋转木马 → 十二朋友园靠狗狗壁画盖章。', more:''},
+  {n:18, t:'米奇好伙伴美味集市（晚餐）', must:true, tip:'补能量，为烟花做准备。', more:''},
+  {n:19, t:'M 大街 & 老车站 & 童车租赁盖章', must:true, tip:'依次完成：老车站商店 → M 大街购物廊 → 童车/轮椅租赁处。', more:''},
+  {n:20, t:'21:15 奇梦之光幻影秀',  must:true, tip:'提前 30 分钟占位；留意风向避烟花灰。', more:''},
+];
+(function(){
+  const box = $('#timeline');
+  const create = (s)=>{
+    const el = document.createElement('section');
+    el.className = 'step'+(load('step.open.'+s.n,false)?' open':'');
+    el.dataset.must = s.must ? '1':'0';
+    el.dataset.title = (s.t + ' ' + s.tip + ' ' + s.more).toLowerCase();
+    el.innerHTML = `
+      <div class="step-head" role="button" aria-expanded="${el.classList.contains('open')}" tabindex="0">
+        <div class="step-num">${s.n}</div>
+        <div class="step-title">${s.t}</div>
+        <div class="step-tags">
+          ${s.must?'<span class="chip ok">必玩</span>':'<span class="chip">可选</span>'}
+          ${(/盖章|盖 章/.test(s.tip+s.more))?'<span class="stamp">盖章点</span>':''}
+        </div>
+      </div>
+      <div class="step-body"><div class="detail">${s.tip}</div>${s.more?`<div class="muted" style="margin-top:6px">${s.more}</div>`:''}</div>
+    `;
+    const head = el.querySelector('.step-head');
+    head.addEventListener('click',()=>{
+      el.classList.toggle('open'); save('step.open.'+s.n, el.classList.contains('open'))
+      head.setAttribute('aria-expanded', el.classList.contains('open'))
+    });
+    head.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') head.click(); });
+    return el;
+  }
+  STEPS.forEach(s => box.appendChild(create(s)));
+
+  // 过滤标签
+  $('#filters').addEventListener('click', e=>{
+    const b = e.target.closest('.tab'); if(!b) return;
+    $$('#filters .tab').forEach(t=>t.classList.remove('active'));
+    b.classList.add('active');
+    const mode = b.dataset.filter;
+    $$('#timeline .step').forEach(el=>{
+      const isMust = el.dataset.must==='1';
+      let show = true;
+      if(mode==='must') show = isMust;
+      if(mode==='opt')  show = !isMust;
+      el.style.display = show?'':'none';
+    })
+  })
+  // 关键词过滤
+  $('#search').addEventListener('input', e=>{
+    const kw = e.target.value.trim().toLowerCase();
+    $$('#timeline .step').forEach(el=>{
+      const ok = !kw || el.dataset.title.includes(kw);
+      el.style.display = ok? '': 'none';
+    })
+  })
+})();
+
+// ====== 地图（Leaflet） ======
+const MAP_POINTS = [
+  {name:'上海迪士尼乐园（中心）',  lat:31.1440,    lng:121.6570,   note:'园区中心 · 适合作为导航点'},
+  {name:'地铁 11 号线 · 迪士尼站', lat:31.143429, lng:121.663737, note:'星愿湖北侧，出站步行入园'},
+  {name:'飞跃地平线（探险岛）',   lat:31.1441416, lng:121.664791, note:'建议左侧队伍 · 2号门入 1号通道'},
+  {name:'七个小矮人矿山车',       lat:31.145539,  lng:121.660329, note:'梦幻世界 · 家庭过山车'},
+  {name:'创极速光轮（明日世界）', lat:31.1437278, lng:121.6525528, note:'速度刺激 · 外侧可盖章'}
+];
+(function(){
+  let mapOK = true;
+  try{
+    const map = L.map('map',{scrollWheelZoom:true,zoomControl:true}).setView([31.1440,121.6570], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '&copy; OpenStreetMap'}).addTo(map);
+    MAP_POINTS.forEach(p=>{
+      const marker = L.marker([p.lat,p.lng]).addTo(map);
+      marker.bindPopup(`<b>${p.name}</b><br>${p.note}`);
+    });
+  }catch(e){
+    mapOK = false; console.warn('地图加载失败，显示占位图', e);
+  }
+  if(!mapOK){
+    document.getElementById('map').style.display='none';
+    document.getElementById('mapFallback').style.display='block';
+  }
+})();
+
+// ====== 底部按钮 ======
+$('#btnExpand').addEventListener('click',()=> $$('#timeline .step').forEach(el=>{el.classList.add('open'); save('step.open.'+el.querySelector('.step-num').textContent,true)}));
+$('#btnCollapse').addEventListener('click',()=> $$('#timeline .step').forEach(el=>{el.classList.remove('open'); save('step.open.'+el.querySelector('.step-num').textContent,false)}));
+$('#btnReset').addEventListener('click',()=>{
+  if(!confirm('清空所有勾选与展开状态？')) return;
+  Object.keys(localStorage).filter(k=>k.startsWith(KEY_PREFIX)).forEach(k=>localStorage.removeItem(k));
+  location.reload();
+});
+$('#btnExport').addEventListener('click',()=>{
+  const data = {
+    time: new Date().toISOString(),
+    packing: PACK_ITEMS.map((n,i)=>({name:n, done: load('pack.'+i,false)})),
+    stamps : STAMPS.map((n,i)=>({name:n, done: load('stamp.'+i,false)})),
+    steps  : STEPS.map(s=>({n:s.n, title:s.t, open: load('step.open.'+s.n,false)}))
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'),{href:url, download:'迪士尼攻略进度-'+Date.now()+'.json'});
+  a.click(); URL.revokeObjectURL(url);
+});
+
+// 初始化勾选持久化
+persistChecks(document);
+</script>
+</body>
+</html>
